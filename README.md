@@ -2,4 +2,4 @@
 My personal perl scripts.
 
 ## Contents
-* **pod-loubim/pod-loubim.pl** -- fetches 'Pod Loubím' daily menu.
+* **pod-loubim/pod-loubim.pl** -- fetches Pod Loubím's restaurant daily menu.
