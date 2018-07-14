@@ -1,6 +1,6 @@
 #!/usr/bin/perl -CS
 
-use 5.0120000;
+# use 5.0120000;
 use strict;
 use warnings;
 use utf8;
@@ -8,7 +8,7 @@ use LWP::UserAgent;
 
 my $vflag = 0;
 
-sub handle_args {
+sub handle_cmd_args {
   if (0 > $#ARGV) {
     return;
   }
@@ -30,7 +30,7 @@ sub isweekend {
   my @weekend = ("sat", "sun");
   my $toreturn = grep(lc($day), @weekend);
   if ($vflag) {
-    print $toreturn ? "It's weekend" : "It isn't weekend :)";
+    print $toreturn ? "It's weekend :(" : "It isn't weekend :)";
     print ".\n";
   }
   return $toreturn;
@@ -59,10 +59,11 @@ sub fetch_site {
   return $response->decoded_content;
 }
 
-sub iterate {
+sub print_menu {
   my $i = 0;
   my $html = fetch_site();
   my $text = "";
+
   foreach $a (split('\n', $html)) {
     $a =~ s/^\s+|\s+$//g; # trim leading and ending whitespace
     if ($a =~ /^\S+$/) { # skip all empty lines
@@ -77,9 +78,12 @@ sub iterate {
     $a =~ s/^\s+|\s+$//g; # trim leading and ending whitespace
     $text .= $a . "\n";
   }
-  print "Restaurace Pod Loubím\n";
+
+  print "Restaurace Pod Loubím\n"; # FIXME: bold print
   my @by_nl = split('\n', $text);
+  # FIXME: push into a variable and then print
   foreach $a (@by_nl[1..($#by_nl - 1)]) { # remove misc info
+    # join price with next line (=meal name)
     if ($a =~ /^\d+/) {
       print $a . " ";
     } else {
@@ -88,6 +92,6 @@ sub iterate {
   }
 }
 
-handle_args();
-iterate();
+handle_cmd_args();
+print_menu();
 
