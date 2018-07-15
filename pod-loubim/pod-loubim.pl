@@ -11,16 +11,15 @@ my $tflag = 0; # print restaurant name?
 sub handle_cli_args {
   while ($#ARGV >= 0) {
     if ($ARGV[0] eq "-h" || $ARGV[0] eq "--help") {
-      print "Displays Pod Loubim's daily menu.\n";
-      print "Usage: pod-loubim.pl [-h|--help]\n";
-      print "       pod-loubim.pl [-v|--verbose] [-r|--print-restaurant-name]\n";
-      print "\n";
-      print "  -h|--help                     prints help message\n";
-      print "  -v|--verbose                  enables verbose mode\n";
-      print "  -t|--print-restaurant-name    whether or not to display 'Restaurace Pod Loubim' header when printing the menu\n";
-      die "\n";
-    }
-    elsif ($ARGV[0] eq "-v" || $ARGV[0] eq "--verbose") {
+      print STDERR
+            "Displays Pod Loubim's daily menu.\n",
+            "Usage: pod-loubim.pl [-h|--help]\n",
+            "       pod-loubim.pl [-v|--verbose] [-r|--print-restaurant-name]\n\n",
+            "  -h|--help                     prints help message\n",
+            "  -v|--verbose                  enables verbose mode\n",
+            "  -t|--print-restaurant-name    whether or not to display 'Restaurace Pod Loubim' header when printing the menu\n";
+      exit 0;
+    } elsif ($ARGV[0] eq "-v" || $ARGV[0] eq "--verbose") {
       $vflag = 1;
       print STDERR "Verbose mode on.\n";
     } elsif ($ARGV[0] eq "-t" || $ARGV[0] eq "--print-restaurant-name") {
@@ -42,8 +41,7 @@ sub isweekend {
   my @weekend = ("sat", "sun");
   my $toreturn = grep(lc($day), @weekend);
   if ($vflag) {
-    print $toreturn ? "It's weekend :(" : "It isn't weekend :)";
-    print ".\n";
+    print STDERR $toreturn ? "It's weekend :(" : "It isn't weekend :)", ".\n";
   }
   return $toreturn;
 }
@@ -56,7 +54,7 @@ sub fetch_site {
 
   my $link = isweekend() ? $links{"weekend"} : $links{"weekday"};
   if ($vflag) {
-    print "Fetching '$link'.\n";
+    print STDERR "Fetching '$link'.\n";
   }
   my $ua = LWP::UserAgent->new;
   $ua->timeout(10);
@@ -65,7 +63,7 @@ sub fetch_site {
   my $response = $ua->get($link);
   $response->is_success or die "Couldn't fetch menu.\n";
   if ($vflag) {
-    print "Successfully fetched menu.\n";
+    print STDERR "Successfully fetched menu.\n";
   }
 
   return $response->decoded_content;
