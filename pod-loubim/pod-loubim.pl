@@ -1,6 +1,5 @@
 #!/usr/bin/perl -CS
 
-# use 5.0120000;
 use strict;
 use warnings;
 use utf8;
@@ -10,9 +9,6 @@ my $vflag = 0; # verbose
 my $tflag = 0; # print restaurant name?
 
 sub handle_cli_args {
-  # if (0 > $#ARGV) {
-  #   return;
-  # }
   while ($#ARGV >= 0) {
     if ($ARGV[0] eq "-h" || $ARGV[0] eq "--help") {
       print "Displays Pod Loubim's daily menu.\n";
