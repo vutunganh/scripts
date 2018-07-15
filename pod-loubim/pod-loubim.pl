@@ -6,22 +6,38 @@ use warnings;
 use utf8;
 use LWP::UserAgent;
 
-my $vflag = 0;
+my $vflag = 0; # verbose
+my $tflag = 0; # print restaurant name?
 
-sub handle_cmd_args {
-  if (0 > $#ARGV) {
-    return;
-  }
-  if ($ARGV[0] eq "-h" || $ARGV[0] eq "--help") {
-    print "Usage: pod-loubim.pl [-h|--help] [-v|--verbose]\n";
-    die "\n";
-  }
+sub handle_cli_args {
+  # if (0 > $#ARGV) {
+  #   return;
+  # }
   while ($#ARGV >= 0) {
-    if ($ARGV[0] eq "-v") {
+    if ($ARGV[0] eq "-h" || $ARGV[0] eq "--help") {
+      print "Displays Pod Loubim's daily menu.\n";
+      print "Usage: pod-loubim.pl [-h|--help]\n";
+      print "       pod-loubim.pl [-v|--verbose] [-r|--print-restaurant-name]\n";
+      print "\n";
+      print "  -h|--help                     prints help message\n";
+      print "  -v|--verbose                  enables verbose mode\n";
+      print "  -t|--print-restaurant-name    whether or not to display 'Restaurace Pod Loubim' header when printing the menu\n";
+      die "\n";
+    }
+    elsif ($ARGV[0] eq "-v" || $ARGV[0] eq "--verbose") {
       $vflag = 1;
       print STDERR "Verbose mode on.\n";
-      shift @ARGV;
+    } elsif ($ARGV[0] eq "-t" || $ARGV[0] eq "--print-restaurant-name") {
+      $tflag = 1;
+      if ($vflag) {
+        print STDERR "Will print restaurant name at the beginning of the menu.\n";
+      }
+    } else {
+      if ($vflag) {
+        print STDERR "Unknown command line argument '$ARGV[0]'.\n";
+      }
     }
+    shift @ARGV;
   }
 }
 
@@ -79,19 +95,22 @@ sub print_menu {
     $text .= $a . "\n";
   }
 
-  print "Restaurace Pod Loubím\n"; # FIXME: bold print
+  if ($tflag) {
+    print "Restaurace Pod Loubím\n"; # TODO: bold print
+  }
   my @by_nl = split('\n', $text);
-  # FIXME: push into a variable and then print
+  my $result;
   foreach $a (@by_nl[1..($#by_nl - 1)]) { # remove misc info
     # join price with next line (=meal name)
     if ($a =~ /^\d+/) {
-      print $a . " ";
+      $result .= "$a ";
     } else {
-      print "$a\n";
+      $result .= "$a\n";
     }
   }
+  print $result;
 }
 
-handle_cmd_args();
+handle_cli_args();
 print_menu();
 
