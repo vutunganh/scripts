@@ -24,13 +24,9 @@ sub handle_cli_args {
       print STDERR "Verbose mode on.\n";
     } elsif ($ARGV[0] eq "-t" || $ARGV[0] eq "--print-restaurant-name") {
       $tflag = 1;
-      if ($vflag) {
-        print STDERR "Will print restaurant name at the beginning of the menu.\n";
-      }
+      $vflag && print STDERR "Will print restaurant name at the beginning of the menu.\n";
     } else {
-      if ($vflag) {
-        print STDERR "Unknown command line argument '$ARGV[0]'.\n";
-      }
+      $vflag && print STDERR "Unknown command line argument '$ARGV[0]'.\n";
     }
     shift @ARGV;
   }
@@ -40,9 +36,7 @@ sub isweekend {
   my $day = (split(' ', localtime))[0];
   my @weekend = ("sat", "sun");
   my $result = grep{$_ eq lc($day)} @weekend;
-  if ($vflag) {
-    print STDERR $result ? "It's weekend :(" : "It isn't weekend :)", ".\n";
-  }
+  $vflag && print STDERR $result ? "It's weekend :(" : "It isn't weekend :)", ".\n";
   return $result;
 }
 
@@ -53,19 +47,15 @@ sub fetch_site {
   );
 
   my $link = isweekend() ? $links{"weekend"} : $links{"weekday"};
-  if ($vflag) {
-    print STDERR "Fetching '$link'.\n";
-  }
+
+  $vflag && print STDERR "Fetching '$link'.\n";
   my $ua = LWP::UserAgent->new;
   $ua->timeout(10);
   $ua->env_proxy;
 
   my $response = $ua->get($link);
   $response->is_success or die "Couldn't fetch menu.\n";
-  if ($vflag) {
-    print STDERR "Successfully fetched menu.\n";
-  }
-
+  $vflag && print STDERR "Successfully fetched menu.\n";
   return $response->decoded_content;
 }
 
@@ -90,10 +80,8 @@ sub print_menu {
   }
 
   $vflag && print STDERR $text;
+  $tflag && print "Restaurace Pod Loubím\n";
 
-  if ($tflag) {
-    print "Restaurace Pod Loubím\n"; # TODO: bold print
-  }
   my @by_nl = split('\n', $text);
   my $result = "";
   foreach $a (@by_nl[1..($#by_nl - 1)]) { # remove misc info
