@@ -79,7 +79,6 @@ sub print_menu {
     $text .= $a . "\n";
   }
 
-  $vflag && print STDERR $text;
   $tflag && print "Restaurace Pod Loubím\n";
 
   my @by_nl = split('\n', $text);
