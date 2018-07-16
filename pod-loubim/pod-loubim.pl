@@ -39,11 +39,11 @@ sub handle_cli_args {
 sub isweekend {
   my $day = (split(' ', localtime))[0];
   my @weekend = ("sat", "sun");
-  my $toreturn = grep(lc($day), @weekend);
+  my $result = grep{$_ eq lc($day)} @weekend;
   if ($vflag) {
-    print STDERR $toreturn ? "It's weekend :(" : "It isn't weekend :)", ".\n";
+    print STDERR $result ? "It's weekend :(" : "It isn't weekend :)", ".\n";
   }
-  return $toreturn;
+  return $result;
 }
 
 sub fetch_site {
@@ -76,10 +76,10 @@ sub print_menu {
 
   foreach $a (split('\n', $html)) {
     $a =~ s/^\s+|\s+$//g; # trim leading and ending whitespace
-    if ($a =~ /^\S+$/) { # skip all empty lines
+    $a =~ s/&nbsp;|&gt;//g; # remove all `&nbsp;`, `&gt`;
+    if ($a =~ /^\S*$/) { # skip all empty lines
       next;
     }
-    $a =~ s/&nbsp;|&gt;//g; # remove all `&nbsp;`, `&gt`;
     $a =~ s/<td[^>]*><\/td>//g; # remove all empty tags
     unless ($a =~ /<\/td\>$/g) { # menu is contained inside a table, so if 
       next;                      # table cell tag isn't found, then skip
@@ -89,11 +89,13 @@ sub print_menu {
     $text .= $a . "\n";
   }
 
+  $vflag && print STDERR $text;
+
   if ($tflag) {
     print "Restaurace Pod Loubím\n"; # TODO: bold print
   }
   my @by_nl = split('\n', $text);
-  my $result;
+  my $result = "";
   foreach $a (@by_nl[1..($#by_nl - 1)]) { # remove misc info
     # join price with next line (=meal name)
     if ($a =~ /^\d+/) {
@@ -103,6 +105,7 @@ sub print_menu {
     }
   }
   print $result;
+  $vflag && print STDERR "DONE\n";
 }
 
 handle_cli_args();
