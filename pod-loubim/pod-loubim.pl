@@ -17,11 +17,14 @@ sub handle_cli_args {
       print STDERR
       "Displays Pod Loubim's daily menu.\n",
       "Usage: pod-loubim.pl [-h|--help]\n",
-      "       pod-loubim.pl [-v|--verbose] [-r|--print-restaurant-name]\n\n",
-      "  -h|--help                     prints help message\n",
+      "       pod-loubim.pl [-v|--verbose] [-r|--print-restaurant-name]",
+      " [-l|--lower-case]\n\n",
+      "  -h|--help                     prints this help message\n",
       "  -v|--verbose                  enables verbose mode\n",
       "  -t|--print-restaurant-name    whether or not to display 'Restaurace",
-      " Pod Loubim' header when printing the menu\n";
+      " Pod Loubim' header when printing the menu\n",
+      "  -l|--lower-case               whether to convert result to lower case",
+      " before printing\n";
       exit 0;
     } elsif ($ARGV[0] eq "-v" || $ARGV[0] eq "--verbose") {
       $vflag = 1;
@@ -81,8 +84,12 @@ sub obtain_menu {
       next;
     }
     $a =~ s/<td[^>]*><\/td>//g; # remove all empty tags
-    unless ($a =~ /<\/td\>$/g || $a =~ /MENU/ || $a =~ /SALÁT/) { # menu is contained inside a table, so if 
-      next;                      # table cell tag isn't found, then skip
+    # menu is contained inside a table, so if 
+    # table cell tag isn't found, then skip
+    # also try to find MENU: and SALAT: labels
+    # FIXME: weekend menu's work differently
+    unless ($a =~ /<\/td\>$/g || $a =~ /MENU/ || $a =~ /SALÁT/) {
+      next;
     }
     $a =~ s|<.+?>||g; # remove all html tags
     $a =~ s/^\s+|\s+$//g; # trim leading and ending whitespace
