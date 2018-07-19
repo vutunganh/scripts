@@ -81,7 +81,7 @@ sub obtain_menu {
       next;
     }
     $a =~ s/<td[^>]*><\/td>//g; # remove all empty tags
-    unless ($a =~ /<\/td\>$/g) { # menu is contained inside a table, so if 
+    unless ($a =~ /<\/td\>$/g || $a =~ /MENU/ || $a =~ /SALÁT/) { # menu is contained inside a table, so if 
       next;                      # table cell tag isn't found, then skip
     }
     $a =~ s|<.+?>||g; # remove all html tags
