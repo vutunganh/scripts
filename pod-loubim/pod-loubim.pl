@@ -1,6 +1,4 @@
 #!/usr/bin/perl -CS
-# FIXME: extract "MENU:" and "SALAT:", because they are located in heading
-#   tags and not in table cells
 
 use strict;
 use warnings;
@@ -9,7 +7,7 @@ use LWP::UserAgent;
 
 my $vflag = 0; # verbose
 my $lflag = 0; # lowercase menu?
-my $tflag = 0; # print restaurant name?
+my $rflag = 0; # print restaurant name?
 
 sub handle_cli_args {
   while ($#ARGV >= 0) {
@@ -30,7 +28,7 @@ sub handle_cli_args {
       $vflag = 1;
       print STDERR "Verbose mode on.\n";
     } elsif ($ARGV[0] eq "-t" || $ARGV[0] eq "--print-restaurant-name") {
-      $tflag = 1;
+      $rflag = 1;
       print STDERR "Will print restaurant name at the beginning of the menu.\n"
         if $vflag;
     } elsif ($ARGV[0] eq "-l" || $ARGV[0] eq "--lower-case") {
@@ -96,7 +94,7 @@ sub obtain_menu {
     $text .= $a . "\n";
   }
 
-  $tflag && print "Restaurace Pod Loubím\n";
+  print "Restaurace Pod Loubím\n" if $rflag;
 
   my @by_nl = split('\n', $text);
   my $result = "";
