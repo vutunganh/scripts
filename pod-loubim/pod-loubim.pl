@@ -19,10 +19,10 @@ sub handle_cli_args {
       " [-l|--lower-case]\n\n",
       "  -h|--help                     prints this help message\n",
       "  -v|--verbose                  enables verbose mode\n",
-      "  -t|--print-restaurant-name    whether or not to display 'Restaurace",
+      "  -t|--print-restaurant-name    whether or not to display '",
       " Pod Loubim' header when printing the menu\n",
-      "  -l|--lower-case               whether to convert result to lower case",
-      " before printing\n";
+      "  -l|--lower-case               whether to convert the result to lower",
+      " case before printing\n";
       exit 0;
     } elsif ($ARGV[0] eq "-v" || $ARGV[0] eq "--verbose") {
       $vflag = 1;
@@ -89,12 +89,13 @@ sub obtain_menu {
     unless ($a =~ /<\/td\>$/g || $a =~ /MENU/ || $a =~ /SALÁT/) {
       next;
     }
+    $a =~ s|(menu) :|$1:|i; # `MENU :` -> `MENU:`
     $a =~ s|<.+?>||g; # remove all html tags
     $a =~ s/^\s+|\s+$//g; # trim leading and ending whitespace
     $text .= $a . "\n";
   }
 
-  print "Restaurace Pod Loubím\n" if $rflag;
+  print "Pod Loubím\n" if $rflag;
 
   my @by_nl = split('\n', $text);
   my $result = "";
