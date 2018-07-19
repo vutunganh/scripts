@@ -8,6 +8,7 @@ use utf8;
 use LWP::UserAgent;
 
 my $vflag = 0; # verbose
+my $lflag = 0; # lowercase menu?
 my $tflag = 0; # print restaurant name?
 
 sub handle_cli_args {
@@ -29,6 +30,10 @@ sub handle_cli_args {
       $tflag = 1;
       print STDERR "Will print restaurant name at the beginning of the menu.\n"
         if $vflag;
+    } elsif ($ARGV[0] eq "-l" || $ARGV[0] eq "--lower-case") {
+      $lflag = 1;
+      print STDERR "Result will be converted to lower case before being",
+      " printed.\n" if $vflag;
     } else {
       print STDERR "Unknown command line argument '$ARGV[0]'.\n" if $vflag;
     }
@@ -64,7 +69,7 @@ sub fetch_site {
   return $response->decoded_content;
 }
 
-sub print_menu {
+sub obtain_menu {
   my $i = 0;
   my $html = fetch_site();
   my $text = "";
@@ -93,11 +98,19 @@ sub print_menu {
     if ($a =~ /^\d+/) {
       $result .= "$a ";
     } else {
-      $result .= "$a\n";
+      if ($lflag) {
+        $result .= lc($a) . "\n";
+      } else {
+        $result .= "$a\n";
+      }
     }
   }
-  print $result;
-  print STDERR "DONE\n" if $vflag;
+  print STDERR "Menu building is done.\n" if $vflag;
+  return $result;
+}
+
+sub print_menu {
+  print obtain_menu();
 }
 
 handle_cli_args();
