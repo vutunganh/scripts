@@ -1,5 +1,4 @@
 #!/usr/bin/perl
-# TODO: fetch rating changes from last contest
 
 use strict;
 use warnings;
@@ -11,8 +10,16 @@ my $vflag = 0;
 my $contest_id = "";
 my $user_list_path = "";
 my $ua = LWP::UserAgent->new;
-$ua->timeout(10);
+$ua->timeout(5);
 $ua->env_proxy;
+
+# aside from 0 assume they're all error codes
+my %exit_codes = (
+  ok => 0,
+  http => 1,
+  codeforces_api => 2,
+  cli => 3
+)
 
 # Expects a complete url to be called as an argument.
 # Returns the expected result.
@@ -22,7 +29,7 @@ sub user_agent_get_url {
   my $response = $ua->get($url);
   unless ($response->is_success) {
     print STDERR "Couldn't fetch url: '$url'.\n";
-    exit 1;
+    exit $exit_codes{"http"};
   }
   return $response->decoded_content;
 }
@@ -38,11 +45,11 @@ sub codeforces_api_call {
   my $raw_response = user_agent_get_url($url);
   my %deserialized = %{parse_json($raw_response)};
   my $status = $deserialized{'status'};
-  unless (lc($status) eq "ok") {
+  unless (lc $status eq "ok") {
     print "Codeforces API failure.";
     print STDERR "Message:\n'$deserialized{'comment'}'." if $vflag;
     print "\n";
-    exit 2;
+    exit $exit_codes{"codeforces_api"};
   }
   return $deserialized{'result'};
 }
@@ -64,21 +71,21 @@ sub handle_cli_args {
       "Variables:\n",
       "  USER_LIST_FILE    a file with usernames on each line\n",
       "  CONTEST_ID        a contest id\n";
-      exit 0;
+      exit %exit_codes{"ok"};
     } elsif ($ARGV[0] eq "-v" || $ARGV[0] eq "--verbose") {
       $vflag = 1;
       print "Verbose mode enabled.\n";
     } elsif ($ARGV[0] eq "-i" || $ARGV[0] eq "--id") {
       unless ($#ARGV > 0) {
         print STDERR "Missing contest id parameter.\n";
-        exit 3;
+        exit $exit_codes{"cli"};
       }
       $contest_id = $ARGV[1];
       shift @ARGV;
     } elsif ($ARGV[0] eq "-u" || $ARGV[0] eq "--user-list") {
       unless ($#ARGV > 0) {
         print STDERR "Missing path to user list parameter.\n";
-        exit 3;
+        exit $exit_codes{"cli"};
       }
       $user_list_path = $ARGV[1];
       shift @ARGV;
@@ -90,12 +97,12 @@ sub handle_cli_args {
 
   if ($contest_id eq "") {
     print STDERR "Unspecified contest id.\n";
-    exit 3;
+    exit $exit_codes{"cli"};
   }
 
   if ($user_list_path eq "") {
     print STDERR "Unspecified path to user list.\n";
-    exit 3;
+    exit $exit_codes{"cli"};
   }
 }
 
