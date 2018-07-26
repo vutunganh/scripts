@@ -18,8 +18,9 @@ my %exit_codes = (
   ok => 0,
   http => 1,
   codeforces_api => 2,
-  cli => 3
-)
+  cli => 3,
+  file_io => 4
+);
 
 # Expects a complete url to be called as an argument.
 # Returns the expected result.
@@ -71,7 +72,7 @@ sub handle_cli_args {
       "Variables:\n",
       "  USER_LIST_FILE    a file with usernames on each line\n",
       "  CONTEST_ID        a contest id\n";
-      exit %exit_codes{"ok"};
+      exit $exit_codes{"ok"};
     } elsif ($ARGV[0] eq "-v" || $ARGV[0] eq "--verbose") {
       $vflag = 1;
       print "Verbose mode enabled.\n";
@@ -106,15 +107,20 @@ sub handle_cli_args {
   }
 }
 
-sub fetch_users {
+sub get_user_list {
+  my $handle = undef;
+  unless(open($handle, "<", $user_list_path)) {
+    print STDERR "Error fetching users from '$user_list_path'\n";
+    exit $exit_codes{"file_io"};
+  }
 
-}
-
-sub build_user_list {
-
+  my @users = ();
+  push @users, $_ while <$handle>;
+  print STDERR "Fetched users '@users'\n" if $vflag;
 }
 
 sub latest_rating_changes {
+  my @users = get_user_list();
   my @rating_changes = @{codeforces_api_call(
     "contest.ratingChanges?contestId=$contest_id")};
   print @rating_changes;
