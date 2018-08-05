@@ -4,13 +4,15 @@ use strict;
 use warnings;
 use utf8;
 use LWP::UserAgent;
-use JSON::Parse 'parse_json';
+use JSON;
 
 my $vflag = 0;
 my $contest_id = "";
 my $user_list_path = "";
+
+# networking
 my $ua = LWP::UserAgent->new;
-$ua->timeout(5);
+$ua->timeout(10);
 $ua->env_proxy;
 
 # aside from 0 assume they're all error codes
@@ -19,8 +21,18 @@ my %exit_codes = (
   http => 1,
   codeforces_api => 2,
   cli => 3,
-  file_io => 4
+  file_io => 4,
+  invalid_contest => 5,
+  invalid_contest_phase => 6
 );
+
+my %contest_status = (
+  before => "BEFORE", 
+  coding => "CODING", 
+  pending => "PENDING_SYSTEM_TEST",
+  testing => "SYSTEM_TEST", 
+  finished => "FINISHED"
+)
 
 # Expects a complete url to be called as an argument.
 # Returns the expected result.
@@ -44,7 +56,7 @@ sub codeforces_api_call {
   my $url = $codeforces_base_url . $method;
   print STDERR "Trying to call '$url'.\n" if $vflag;
   my $raw_response = user_agent_get_url($url);
-  my %deserialized = %{parse_json($raw_response)};
+  my %deserialized = %{decode_json($raw_response)};
   my $status = $deserialized{'status'};
   unless (lc $status eq "ok") {
     print "Codeforces API failure.";
@@ -55,12 +67,53 @@ sub codeforces_api_call {
   return $deserialized{'result'};
 }
 
+sub codeforces_api_rating_changes {
+  my $cid = $_[0];
+  print STDERR "Getting rating changes.\n";
+  return codeforces_api_call "contest.ratingChanges?contestId=$cid";
+}
+
+sub codeforces_api_contest_list {
+  my $cid = $_[0];
+  print STDERR "Getting contest list.\n";
+  return codeforces_api_call "contest.list";
+}
+
+# Expects contest id as an argument.
+sub get_contest_info {
+  my $cid = $_[0];
+  print STDERR "Getting contest '$cid'.\n";
+  my @all_contests = @{codeforces_api_contest_list()};
+  my @searched_contest = grep {$_->{"id"} == $cid} @all_contests;
+  unless (length @searched_contest == 1) {
+    print STDERR "Cannot find contest with id '$cid'.\n";
+    exit $exit_codes{"invalid_contest"};
+  }
+  return %{$searched_contest[0]};
+}
+
+sub get_user_list {
+  my $handle = undef;
+  unless(open($handle, "<", $user_list_path)) {
+    print STDERR "Error fetching users from '$user_list_path'\n";
+    exit $exit_codes{"file_io"};
+  }
+
+  my %users = ();
+  while (<$handle>) {
+    $users{$_} = 1;
+  }
+  print STDERR "Fetched users'", keys %users, "'\n" if $vflag;
+  return %users;
+}
+
 sub handle_cli_args {
   my $required_amount_of_args = 1;
   while ($#ARGV >= 0) {
     if ($ARGV[0] eq "-h" || $ARGV[0] eq "--help") {
       print STDERR "Fetches from Codeforces API latest rating changes of",
       "relevant users.\n", 
+      "\n",
       "Usage: latest-rating.pl [-h|--help]\n",
       "       latest-rating.pl [-v|--verbose] -u|--user-list USER_LIST_FILE",
       " -i|--id CONTEST_ID\n",
@@ -107,25 +160,37 @@ sub handle_cli_args {
   }
 }
 
-sub get_user_list {
-  my $handle = undef;
-  unless(open($handle, "<", $user_list_path)) {
-    print STDERR "Error fetching users from '$user_list_path'\n";
-    exit $exit_codes{"file_io"};
-  }
-
-  my @users = ();
-  push @users, $_ while <$handle>;
-  print STDERR "Fetched users '@users'\n" if $vflag;
+sub is_contest_finished {
 }
 
-sub latest_rating_changes {
-  my @users = get_user_list();
-  my @rating_changes = @{codeforces_api_call(
-    "contest.ratingChanges?contestId=$contest_id")};
-  print @rating_changes;
+sub rating_changes {
+  my %users = get_user_list();
+  my @rating_changes = @{codeforces_api_rating_changes $contest_id};
+  my %current_contest = get_contest_info $contest_id;
+  my $phase = $current_contest{"phase"};
+  unless ($phase eq $contest_status{"finished"}) {
+    if ($phase eq $contest_status{"before"}) {
+      print "Contest hasn't started yet.\n";
+    } elsif ($phase eq $contest_status{"coding"}) {
+      print "Contest is ongoing, go get some ACs!\n";
+    } elsif ($phase eq $contest_status{"pending"}) {
+      print "System test hasn't started yet.\n";
+    } elsif ($phase eq $contest_status{"testing"}) {
+      print "Waiting for system test to finish.\n";
+    } else {
+      print STDERR "Unknown contest phase.\n";
+      exit $exit_codes{"invalid_contest_phase"};
+    }
+    return;
+  }
+
+  my @user_rating_changes = grep {exists $users{$_->{"handle"}}} @current_contest;
+  foreach(@user_rating_changes) {
+    print %{$_}, "\n";
+  }
 }
 
 handle_cli_args();
-latest_rating_changes();
+# rating_changes();
+print get_contest_info 1016;
 
