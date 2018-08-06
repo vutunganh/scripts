@@ -8,7 +8,6 @@ use JSON;
 
 my $vflag = 0;
 my $contest_id = "";
-my $user_list_path = "";
 
 # networking
 my $ua = LWP::UserAgent->new;
@@ -93,17 +92,15 @@ sub get_contest_info {
 }
 
 sub get_user_list {
-  my $handle = undef;
-  unless(open($handle, "<", $user_list_path)) {
-    print STDERR "Error fetching users from '$user_list_path'\n" if $vflag;
-    exit $exit_codes{"file_io"};
-  }
+  my $users_txt = user_agent_get_url "https://raw.githubusercontent.com/vutunganh/perl-scripts/latest-rating/latest-rating/interesting-users.txt";
+  my @user_arr = split ' ', $users_txt;
+  my %users = @user_arr;
 
-  my %users = ();
-  while (<$handle>) {
-    chomp;
-    $users{$_} = 1;
-  }
+  
+  # while (<$handle>) {
+  #   chomp;
+  #   $users{$_} = 1;
+  # }
   print STDERR "Fetched users'", keys %users, "'\n" if $vflag;
   return %users;
 }
@@ -116,8 +113,7 @@ sub handle_cli_args {
       "relevant users.\n", 
       "\n",
       "Usage: latest-rating.pl [-h|--help]\n",
-      "       latest-rating.pl [-v|--verbose] -u|--user-list USER_LIST_FILE",
-      " -i|--id CONTEST_ID\n",
+      "       latest-rating.pl [-v|--verbose] -i|--id CONTEST_ID\n",
       "  -h|--help           prints this help message\n",
       "  -v|--verbose        enables verbose mode\n",
       "  -i|--id             id of the contest to fetch rating changes from\n",
@@ -137,13 +133,6 @@ sub handle_cli_args {
       }
       $contest_id = $ARGV[1];
       shift @ARGV;
-    } elsif ($ARGV[0] eq "-u" || $ARGV[0] eq "--user-list") {
-      unless ($#ARGV > 0) {
-        print STDERR "Missing path to user list parameter.\n";
-        exit $exit_codes{"cli"};
-      }
-      $user_list_path = $ARGV[1];
-      shift @ARGV;
     } else {
       print STDERR "Unknown command line argument '$ARGV[0]'.\n" if $vflag;
     }
@@ -152,11 +141,6 @@ sub handle_cli_args {
 
   if ($contest_id eq "") {
     print STDERR "Unspecified contest id.\n";
-    exit $exit_codes{"cli"};
-  }
-
-  if ($user_list_path eq "") {
-    print STDERR "Unspecified path to user list.\n";
     exit $exit_codes{"cli"};
   }
 }
