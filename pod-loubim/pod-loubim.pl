@@ -1,6 +1,4 @@
 #!/usr/bin/perl -CS
-# FIXME: extract "MENU:" and "SALAT:", because they are located in heading
-#   tags and not in table cells
 
 use strict;
 use warnings;
@@ -8,7 +6,8 @@ use utf8;
 use LWP::UserAgent;
 
 my $vflag = 0; # verbose
-my $tflag = 0; # print restaurant name?
+my $lflag = 0; # lowercase menu?
+my $rflag = 0; # print restaurant name?
 
 sub handle_cli_args {
   while ($#ARGV >= 0) {
@@ -16,19 +15,26 @@ sub handle_cli_args {
       print STDERR
       "Displays Pod Loubim's daily menu.\n",
       "Usage: pod-loubim.pl [-h|--help]\n",
-      "       pod-loubim.pl [-v|--verbose] [-r|--print-restaurant-name]\n\n",
-      "  -h|--help                     prints help message\n",
+      "       pod-loubim.pl [-v|--verbose] [-r|--print-restaurant-name]",
+      " [-l|--lower-case]\n\n",
+      "  -h|--help                     prints this help message\n",
       "  -v|--verbose                  enables verbose mode\n",
-      "  -t|--print-restaurant-name    whether or not to display 'Restaurace",
-      " Pod Loubim' header when printing the menu\n";
+      "  -t|--print-restaurant-name    whether or not to display '",
+      " Pod Loubim' header when printing the menu\n",
+      "  -l|--lower-case               whether to convert the result to lower",
+      " case before printing\n";
       exit 0;
     } elsif ($ARGV[0] eq "-v" || $ARGV[0] eq "--verbose") {
       $vflag = 1;
       print STDERR "Verbose mode on.\n";
     } elsif ($ARGV[0] eq "-t" || $ARGV[0] eq "--print-restaurant-name") {
-      $tflag = 1;
+      $rflag = 1;
       print STDERR "Will print restaurant name at the beginning of the menu.\n"
         if $vflag;
+    } elsif ($ARGV[0] eq "-l" || $ARGV[0] eq "--lower-case") {
+      $lflag = 1;
+      print STDERR "Result will be converted to lower case before being",
+      " printed.\n" if $vflag;
     } else {
       print STDERR "Unknown command line argument '$ARGV[0]'.\n" if $vflag;
     }
@@ -64,7 +70,7 @@ sub fetch_site {
   return $response->decoded_content;
 }
 
-sub print_menu {
+sub obtain_menu {
   my $i = 0;
   my $html = fetch_site();
   my $text = "";
@@ -76,15 +82,20 @@ sub print_menu {
       next;
     }
     $a =~ s/<td[^>]*><\/td>//g; # remove all empty tags
-    unless ($a =~ /<\/td\>$/g) { # menu is contained inside a table, so if 
-      next;                      # table cell tag isn't found, then skip
+    # menu is contained inside a table, so if 
+    # table cell tag isn't found, then skip
+    # also try to find MENU: and SALAT: labels
+    # FIXME: weekend menu's work differently
+    unless ($a =~ /<\/td\>$/g || $a =~ /MENU/ || $a =~ /SALÁT/) {
+      next;
     }
+    $a =~ s|(menu) :|$1:|i; # `MENU :` -> `MENU:`
     $a =~ s|<.+?>||g; # remove all html tags
     $a =~ s/^\s+|\s+$//g; # trim leading and ending whitespace
     $text .= $a . "\n";
   }
 
-  $tflag && print "Restaurace Pod Loubím\n";
+  print "Pod Loubím\n" if $rflag;
 
   my @by_nl = split('\n', $text);
   my $result = "";
@@ -93,11 +104,19 @@ sub print_menu {
     if ($a =~ /^\d+/) {
       $result .= "$a ";
     } else {
-      $result .= "$a\n";
+      if ($lflag) {
+        $result .= lc($a) . "\n";
+      } else {
+        $result .= "$a\n";
+      }
     }
   }
-  print $result;
-  print STDERR "DONE\n" if $vflag;
+  print STDERR "Menu building is done.\n" if $vflag;
+  return $result;
+}
+
+sub print_menu {
+  print obtain_menu();
 }
 
 handle_cli_args();
