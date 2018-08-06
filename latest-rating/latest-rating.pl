@@ -32,7 +32,7 @@ my %contest_status = (
   pending => "PENDING_SYSTEM_TEST",
   testing => "SYSTEM_TEST", 
   finished => "FINISHED"
-)
+);
 
 # Expects a complete url to be called as an argument.
 # Returns the expected result.
@@ -69,23 +69,23 @@ sub codeforces_api_call {
 
 sub codeforces_api_rating_changes {
   my $cid = $_[0];
-  print STDERR "Getting rating changes.\n";
+  print STDERR "Getting rating changes.\n" if $vflag;
   return codeforces_api_call "contest.ratingChanges?contestId=$cid";
 }
 
 sub codeforces_api_contest_list {
   my $cid = $_[0];
-  print STDERR "Getting contest list.\n";
+  print STDERR "Getting contest list.\n" if $vflag;
   return codeforces_api_call "contest.list";
 }
 
 # Expects contest id as an argument.
 sub get_contest_info {
   my $cid = $_[0];
-  print STDERR "Getting contest '$cid'.\n";
+  print STDERR "Getting contest '$cid'.\n" if $vflag;
   my @all_contests = @{codeforces_api_contest_list()};
   my @searched_contest = grep {$_->{"id"} == $cid} @all_contests;
-  unless (length @searched_contest == 1) {
+  unless (scalar @searched_contest == 1) {
     print STDERR "Cannot find contest with id '$cid'.\n";
     exit $exit_codes{"invalid_contest"};
   }
@@ -95,12 +95,13 @@ sub get_contest_info {
 sub get_user_list {
   my $handle = undef;
   unless(open($handle, "<", $user_list_path)) {
-    print STDERR "Error fetching users from '$user_list_path'\n";
+    print STDERR "Error fetching users from '$user_list_path'\n" if $vflag;
     exit $exit_codes{"file_io"};
   }
 
   my %users = ();
   while (<$handle>) {
+    chomp;
     $users{$_} = 1;
   }
   print STDERR "Fetched users'", keys %users, "'\n" if $vflag;
@@ -160,12 +161,7 @@ sub handle_cli_args {
   }
 }
 
-sub is_contest_finished {
-}
-
 sub rating_changes {
-  my %users = get_user_list();
-  my @rating_changes = @{codeforces_api_rating_changes $contest_id};
   my %current_contest = get_contest_info $contest_id;
   my $phase = $current_contest{"phase"};
   unless ($phase eq $contest_status{"finished"}) {
@@ -184,13 +180,16 @@ sub rating_changes {
     return;
   }
 
-  my @user_rating_changes = grep {exists $users{$_->{"handle"}}} @current_contest;
-  foreach(@user_rating_changes) {
-    print %{$_}, "\n";
+  my %users = get_user_list();
+  my @rating_changes = @{codeforces_api_rating_changes $contest_id};
+
+  foreach(@rating_changes) {
+    my %cur = %{$_};
+    my $smiley = $cur{oldRating} > $cur{newRating} ? ":(" : ":)";
+    print "$cur{handle}", " ", $cur{oldRating}, " -> ", $cur{newRating}, " $smiley", "\n" if (exists($users{$cur{handle}}));
   }
 }
 
 handle_cli_args();
-# rating_changes();
-print get_contest_info 1016;
+rating_changes();
 
