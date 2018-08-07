@@ -92,16 +92,10 @@ sub get_contest_info {
 }
 
 sub get_user_list {
+  print STDERR "Getting user list.\n" if $vflag;
   my $users_txt = user_agent_get_url "https://raw.githubusercontent.com/vutunganh/perl-scripts/latest-rating/latest-rating/interesting-users.txt";
   my @user_arr = split ' ', $users_txt;
-  my %users = @user_arr;
-
-  
-  # while (<$handle>) {
-  #   chomp;
-  #   $users{$_} = 1;
-  # }
-  print STDERR "Fetched users'", keys %users, "'\n" if $vflag;
+  my %users = map {$_ => 1} @user_arr;
   return %users;
 }
 
@@ -166,11 +160,17 @@ sub rating_changes {
 
   my %users = get_user_list();
   my @rating_changes = @{codeforces_api_rating_changes $contest_id};
+  my @relevant_users = grep {exists($users{$_->{handle}})} @rating_changes;
 
-  foreach(@rating_changes) {
+  if (scalar @relevant_users < 1) {
+    print "No one competed!\n";
+    return;
+  }
+
+  foreach(@relevant_users) {
     my %cur = %{$_};
     my $smiley = $cur{oldRating} > $cur{newRating} ? ":(" : ":)";
-    print "$cur{handle}", " ", $cur{oldRating}, " -> ", $cur{newRating}, " $smiley", "\n" if (exists($users{$cur{handle}}));
+    print "$cur{handle}", " ", $cur{oldRating}, " -> ", $cur{newRating}, " $smiley", "\n";
   }
 }
 
