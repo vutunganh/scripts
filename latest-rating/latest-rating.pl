@@ -15,7 +15,7 @@ my $ua = LWP::UserAgent->new;
 $ua->timeout(10);
 $ua->env_proxy;
 
-# all contests
+# all contests "singleton"
 my %all_contests = ();
 
 # aside from 0 assume they're all error codes
@@ -182,8 +182,9 @@ sub rating_change_single_contest {
     my %cur = %{$_};
     my $newRating = $cur{newRating};
     my $oldRating = $cur{oldRating};
+    my $diff = $newRating - $oldRating;
     my $smiley = $oldRating > $newRating ? ":-(" : ":-)";
-    print "$cur{handle}", " ", $oldRating, " -> ", $newRating, " (", $newRating - $oldRating, ") $smiley", "\n";
+    print "$cur{handle}", " ", $oldRating, " -> ", $newRating, " (", $diff > 0 ? "+" : "",$newRating - $oldRating, ") $smiley", "\n";
   }
 }
 
@@ -191,6 +192,7 @@ sub rating_changes {
   my %all_contests = codeforces_api_contest_list;
   foreach(@contest_ids) {
     print $all_contests{$_}->{name}, "\n";
+    print "http://codeforces.com/contest/$_\n";
     rating_change_single_contest($_);
     print "\n";
   }
