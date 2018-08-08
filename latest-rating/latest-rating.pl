@@ -180,8 +180,10 @@ sub rating_change_single_contest {
 
   foreach(@relevant_users) {
     my %cur = %{$_};
-    my $smiley = $cur{oldRating} > $cur{newRating} ? ":-(" : ":-)";
-    print "$cur{handle}", " ", $cur{oldRating}, " -> ", $cur{newRating}, " $smiley", "\n";
+    my $newRating = $cur{newRating};
+    my $oldRating = $cur{oldRating};
+    my $smiley = $oldRating > $newRating ? ":-(" : ":-)";
+    print "$cur{handle}", " ", $oldRating, " -> ", $newRating, " (", $newRating - $oldRating, ") $smiley", "\n";
   }
 }
 
