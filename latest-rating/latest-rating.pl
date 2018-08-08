@@ -6,13 +6,17 @@ use utf8;
 use LWP::UserAgent;
 use JSON;
 
+# cli args
 my $vflag = 0;
-my $contest_id = "";
+my @contest_ids = ();
 
 # networking
 my $ua = LWP::UserAgent->new;
 $ua->timeout(10);
 $ua->env_proxy;
+
+# all contests
+my %all_contests = ();
 
 # aside from 0 assume they're all error codes
 my %exit_codes = (
@@ -73,22 +77,23 @@ sub codeforces_api_rating_changes {
 }
 
 sub codeforces_api_contest_list {
-  my $cid = $_[0];
+  return %all_contests if (%all_contests);
   print STDERR "Getting contest list.\n" if $vflag;
-  return codeforces_api_call "contest.list";
+  my @contests = @{codeforces_api_call "contest.list"};
+  %all_contests = map {$_->{id} => $_} @contests;
+  return codeforces_api_contest_list();
 }
 
 # Expects contest id as an argument.
 sub get_contest_info {
   my $cid = $_[0];
   print STDERR "Getting contest '$cid'.\n" if $vflag;
-  my @all_contests = @{codeforces_api_contest_list()};
-  my @searched_contest = grep {$_->{"id"} == $cid} @all_contests;
-  unless (scalar @searched_contest == 1) {
+  my %contests = codeforces_api_contest_list();
+  unless (exists $contests{$cid}) {
     print STDERR "Cannot find contest with id '$cid'.\n";
     exit $exit_codes{"invalid_contest"};
   }
-  return %{$searched_contest[0]};
+  return %{$contests{$cid}};
 }
 
 sub get_user_list {
@@ -107,7 +112,7 @@ sub handle_cli_args {
       "relevant users.\n", 
       "\n",
       "Usage: latest-rating.pl [-h|--help]\n",
-      "       latest-rating.pl [-v|--verbose] -i|--id CONTEST_ID\n",
+      "       latest-rating.pl [-v|--verbose] -i|--id CONTEST_ID...\n",
       "  -h|--help           prints this help message\n",
       "  -v|--verbose        enables verbose mode\n",
       "  -i|--id             id of the contest to fetch rating changes from\n",
@@ -115,7 +120,9 @@ sub handle_cli_args {
       "\n",
       "Variables:\n",
       "  USER_LIST_FILE    a file with usernames on each line\n",
-      "  CONTEST_ID        a contest id\n";
+      "  CONTEST_ID        a contest id\n",
+      "Example:\n",
+      "  ./latest-rating.pl -i 1016 1015\n";
       exit $exit_codes{"ok"};
     } elsif ($ARGV[0] eq "-v" || $ARGV[0] eq "--verbose") {
       $vflag = 1;
@@ -125,22 +132,26 @@ sub handle_cli_args {
         print STDERR "Missing contest id parameter.\n";
         exit $exit_codes{"cli"};
       }
-      $contest_id = $ARGV[1];
       shift @ARGV;
+      while ($#ARGV >= 0 && substr($ARGV[0], 0, 1) ne "-") {
+        push @contest_ids, $ARGV[0];
+        shift @ARGV;
+      }
     } else {
       print STDERR "Unknown command line argument '$ARGV[0]'.\n" if $vflag;
     }
     shift @ARGV;
   }
 
-  if ($contest_id eq "") {
+  if (scalar @contest_ids < 1) {
     print STDERR "Unspecified contest id.\n";
-    exit $exit_codes{"cli"};
+    exit $exit_codes{cli};
   }
 }
 
-sub rating_changes {
-  my %current_contest = get_contest_info $contest_id;
+sub rating_change_single_contest {
+  my $cid = $_[0];
+  my %current_contest = get_contest_info $cid;
   my $phase = $current_contest{"phase"};
   unless ($phase eq $contest_status{"finished"}) {
     if ($phase eq $contest_status{"before"}) {
@@ -159,7 +170,7 @@ sub rating_changes {
   }
 
   my %users = get_user_list();
-  my @rating_changes = @{codeforces_api_rating_changes $contest_id};
+  my @rating_changes = @{codeforces_api_rating_changes $cid};
   my @relevant_users = grep {exists($users{$_->{handle}})} @rating_changes;
 
   if (scalar @relevant_users < 1) {
@@ -169,8 +180,17 @@ sub rating_changes {
 
   foreach(@relevant_users) {
     my %cur = %{$_};
-    my $smiley = $cur{oldRating} > $cur{newRating} ? ":(" : ":)";
+    my $smiley = $cur{oldRating} > $cur{newRating} ? ":-(" : ":-)";
     print "$cur{handle}", " ", $cur{oldRating}, " -> ", $cur{newRating}, " $smiley", "\n";
+  }
+}
+
+sub rating_changes {
+  my %all_contests = codeforces_api_contest_list;
+  foreach(@contest_ids) {
+    print $all_contests{$_}->{name}, "\n";
+    rating_change_single_contest($_);
+    print "\n";
   }
 }
 
