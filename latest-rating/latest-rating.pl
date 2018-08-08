@@ -98,7 +98,7 @@ sub get_contest_info {
 
 sub get_user_list {
   print STDERR "Getting user list.\n" if $vflag;
-  my $users_txt = user_agent_get_url "https://raw.githubusercontent.com/vutunganh/perl-scripts/latest-rating/latest-rating/interesting-users.txt";
+  my $users_txt = user_agent_get_url "https://raw.githubusercontent.com/vutunganh/perl-scripts/master/resources/interesting-users.txt";
   my @user_arr = split ' ', $users_txt;
   my %users = map {$_ => 1} @user_arr;
   return %users;
