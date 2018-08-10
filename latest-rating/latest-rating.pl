@@ -35,7 +35,8 @@ my %contest_status = (
 
 # Expects a complete url to be called as an argument.
 # Returns the expected result.
-sub user_agent_get_url {
+sub user_agent_get_url
+{
   my $url = $_[0];
   print STDERR "Trying to get url: '$url'.\n" if $vflag;
   my $response = HTTP::Tiny->new->get($url);
@@ -50,7 +51,8 @@ sub user_agent_get_url {
 # Expects a REST method with parameters from Codeforces API as an argument.
 # Example: codeforces_api_call("user.info?handles=tourist");
 # Returns a deserialized response.
-sub codeforces_api_call {
+sub codeforces_api_call
+{
   my $codeforces_base_url = "http://codeforces.com/api/";
   my $method = $_[0];
   my $url = $codeforces_base_url . $method;
@@ -67,13 +69,15 @@ sub codeforces_api_call {
   return $deserialized{result};
 }
 
-sub codeforces_api_rating_changes {
+sub codeforces_api_rating_changes
+{
   my $cid = $_[0];
   print STDERR "Getting rating changes.\n" if $vflag;
   return codeforces_api_call "contest.ratingChanges?contestId=$cid";
 }
 
-sub codeforces_api_contest_list {
+sub codeforces_api_contest_list
+{
   return %all_contests if (%all_contests);
   print STDERR "Getting contest list.\n" if $vflag;
   my @contests = @{codeforces_api_call "contest.list"};
@@ -82,7 +86,8 @@ sub codeforces_api_contest_list {
 }
 
 # Expects contest id as an argument.
-sub get_contest_info {
+sub get_contest_info
+{
   my $cid = $_[0];
   print STDERR "Getting contest '$cid'.\n" if $vflag;
   my %contests = codeforces_api_contest_list();
@@ -93,7 +98,8 @@ sub get_contest_info {
   return %{$contests{$cid}};
 }
 
-sub get_user_list {
+sub get_user_list
+{
   print STDERR "Getting user list.\n" if $vflag;
   my $users_txt = user_agent_get_url "https://raw.githubusercontent.com/" . 
                   "vutunganh/perl-scripts/master/resources/" . 
@@ -103,7 +109,8 @@ sub get_user_list {
   return %users;
 }
 
-sub get_latest_contests {
+sub get_latest_contests
+{
   my %contests = codeforces_api_contest_list();
   my %divs = ();
   my $cur_id = max keys %contests;
@@ -120,7 +127,8 @@ sub get_latest_contests {
   return values %divs;
 }
 
-sub handle_cli_args {
+sub handle_cli_args
+{
   my $required_amount_of_args = 1;
   while ($#ARGV >= 0) {
     if ($ARGV[0] eq "-h" || $ARGV[0] eq "--help") {
@@ -153,7 +161,8 @@ sub handle_cli_args {
   }
 }
 
-sub rating_change_single_contest {
+sub rating_change_single_contest
+{
   my $cid = $_[0];
   my %current_contest = get_contest_info $cid;
   my $phase = $current_contest{phase};
@@ -193,7 +202,8 @@ sub rating_change_single_contest {
   }
 }
 
-sub rating_changes {
+sub rating_changes
+{
   my %all_contests = codeforces_api_contest_list;
   foreach(@contest_ids) {
     next unless defined $all_contests{$_};
