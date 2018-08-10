@@ -40,6 +40,7 @@ sub user_agent_get_url {
   print STDERR "Trying to get url: '$url'.\n" if $vflag;
   my $response = HTTP::Tiny->new->get($url);
   unless ($response->{success}) {
+    print "Network failure.\n";
     print STDERR "Couldn't fetch url: '$url'.\n";
     exit $exit_codes{http};
   }
@@ -148,7 +149,7 @@ sub handle_cli_args {
 
   if (scalar @contest_ids < 1) {
     @contest_ids = get_latest_contests();
-    print "Getting last div. {1,2,3} contests, because id's weren't specified.\n\n";
+    print "Getting latest finished div. {1,2,3} contests, because id's weren't specified.\n\n";
   }
 }
 
