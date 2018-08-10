@@ -127,31 +127,20 @@ sub handle_cli_args {
       "relevant users.\n", 
       "\n",
       "Usage: latest-rating.pl [-h|--help]\n",
-      "       latest-rating.pl [-v|--verbose] -i|--id CONTEST_ID...\n",
+      "       latest-rating.pl [-v|--verbose] CONTEST_ID...\n",
       "  -h|--help           prints this help message\n",
       "  -v|--verbose        enables verbose mode\n",
-      "  -i|--id             id of the contest to fetch rating changes from\n",
       "\n",
-      "Variables:\n",
-      "  USER_LIST_FILE    a file with usernames on each line\n",
-      "  CONTEST_ID        a contest id\n",
       "Example:\n",
-      "  ./latest-rating.pl -i 1016 1015\n";
+      "  ./latest-rating.pl 1016 1015\n";
       exit $exit_codes{ok};
     } elsif ($ARGV[0] eq "-v" || $ARGV[0] eq "--verbose") {
       $vflag = 1;
-      print "Verbose mode enabled.\n";
-    } elsif ($ARGV[0] eq "-i" || $ARGV[0] eq "--id") {
-      unless ($#ARGV > 0) {
-        print STDERR "Missing contest id parameter.\n";
-        exit $exit_codes{cli};
-      }
-      shift @ARGV;
-      while ($#ARGV >= 0 && substr($ARGV[0], 0, 1) ne "-") {
-        push @contest_ids, $ARGV[0];
-        shift @ARGV;
-      }
+      print STDERR "Verbose mode enabled.\n";
     } else {
+      if ($ARGV[0] =~ /^\d+$/) {
+        push @contest_ids, $ARGV[0];
+      }
       print STDERR "Unknown command line argument '$ARGV[0]'.\n" if $vflag;
     }
     shift @ARGV;
@@ -159,7 +148,7 @@ sub handle_cli_args {
 
   if (scalar @contest_ids < 1) {
     @contest_ids = get_latest_contests();
-    print STDERR "Getting last div. {1,2,3} contests, because id's weren't specified.\n";
+    print "Getting last div. {1,2,3} contests, because id's weren't specified.\n";
   }
 }
 
