@@ -148,7 +148,7 @@ sub handle_cli_args {
 
   if (scalar @contest_ids < 1) {
     @contest_ids = get_latest_contests();
-    print "Getting last div. {1,2,3} contests, because id's weren't specified.\n";
+    print "Getting last div. {1,2,3} contests, because id's weren't specified.\n\n";
   }
 }
 
