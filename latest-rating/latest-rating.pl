@@ -157,7 +157,7 @@ sub handle_cli_args
 
   if (scalar @contest_ids < 1) {
     @contest_ids = get_latest_contests();
-    print "Getting latest finished div. {1,2,3} contests, because id's weren't specified.\n\n";
+    print "Getting latest finished div. {1,2,3} contests, because contest ids weren't specified.\n\n";
   }
 }
 
@@ -187,7 +187,7 @@ sub rating_change_single_contest
   my @relevant_users = grep {exists($users{$_->{handle}})} @rating_changes;
 
   if (scalar @relevant_users < 1) {
-    print "No one competed or contest was unrated!\n";
+    print "No one competed or the contest was unrated!\n";
     return;
   }
 
