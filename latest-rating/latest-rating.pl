@@ -3,17 +3,13 @@
 use strict;
 use warnings;
 use utf8;
-use LWP::UserAgent;
+use HTTP::Tiny;
 use JSON;
+use List::Util qw(max);
 
 # cli args
 my $vflag = 0;
 my @contest_ids = ();
-
-# networking
-my $ua = LWP::UserAgent->new;
-$ua->timeout(10);
-$ua->env_proxy;
 
 # all contests "singleton"
 my %all_contests = ();
@@ -42,12 +38,12 @@ my %contest_status = (
 sub user_agent_get_url {
   my $url = $_[0];
   print STDERR "Trying to get url: '$url'.\n" if $vflag;
-  my $response = $ua->get($url);
-  unless ($response->is_success) {
+  my $response = HTTP::Tiny->new->get($url);
+  unless ($response->{success}) {
     print STDERR "Couldn't fetch url: '$url'.\n";
-    exit $exit_codes{"http"};
+    exit $exit_codes{http};
   }
-  return $response->decoded_content;
+  return $response->{content};
 }
 
 # Expects a REST method with parameters from Codeforces API as an argument.
@@ -60,14 +56,14 @@ sub codeforces_api_call {
   print STDERR "Trying to call '$url'.\n" if $vflag;
   my $raw_response = user_agent_get_url($url);
   my %deserialized = %{decode_json($raw_response)};
-  my $status = $deserialized{'status'};
+  my $status = $deserialized{status};
   unless (lc $status eq "ok") {
     print "Codeforces API failure.";
-    print STDERR "Message:\n'$deserialized{'comment'}'." if $vflag;
+    print STDERR "Message:\n'$deserialized{comment}'." if $vflag;
     print "\n";
-    exit $exit_codes{"codeforces_api"};
+    exit $exit_codes{codeforces_api};
   }
-  return $deserialized{'result'};
+  return $deserialized{result};
 }
 
 sub codeforces_api_rating_changes {
@@ -91,17 +87,36 @@ sub get_contest_info {
   my %contests = codeforces_api_contest_list();
   unless (exists $contests{$cid}) {
     print STDERR "Cannot find contest with id '$cid'.\n";
-    exit $exit_codes{"invalid_contest"};
+    exit $exit_codes{invalid_contest};
   }
   return %{$contests{$cid}};
 }
 
 sub get_user_list {
   print STDERR "Getting user list.\n" if $vflag;
-  my $users_txt = user_agent_get_url "https://raw.githubusercontent.com/vutunganh/perl-scripts/master/resources/interesting-users.txt";
+  my $users_txt = user_agent_get_url "https://raw.githubusercontent.com/" . 
+                  "vutunganh/perl-scripts/master/resources/" . 
+                  "interesting-users.txt";
   my @user_arr = split ' ', $users_txt;
   my %users = map {$_ => 1} @user_arr;
   return %users;
+}
+
+sub get_latest_contests {
+  my %contests = codeforces_api_contest_list();
+  my %divs = ();
+  my $cur_id = max keys %contests;
+  for (my $i = $cur_id; $i >= 0; --$i) {
+    next unless (defined $contests{$i} && $contests{$i}->{phase} eq
+                 $contest_status{finished});
+    my $name = $contests{$i}->{name};
+    my (@div) = $name =~ /div\. (\d)/gi;
+    foreach (@div) {
+      $divs{$_} = $i;
+    }
+    last if scalar values %divs > 2;
+  }
+  return values %divs;
 }
 
 sub handle_cli_args {
@@ -116,21 +131,20 @@ sub handle_cli_args {
       "  -h|--help           prints this help message\n",
       "  -v|--verbose        enables verbose mode\n",
       "  -i|--id             id of the contest to fetch rating changes from\n",
-      "  -u|--user-list      path to a text file described at USER_LIST_FILE\n",
       "\n",
       "Variables:\n",
       "  USER_LIST_FILE    a file with usernames on each line\n",
       "  CONTEST_ID        a contest id\n",
       "Example:\n",
       "  ./latest-rating.pl -i 1016 1015\n";
-      exit $exit_codes{"ok"};
+      exit $exit_codes{ok};
     } elsif ($ARGV[0] eq "-v" || $ARGV[0] eq "--verbose") {
       $vflag = 1;
       print "Verbose mode enabled.\n";
     } elsif ($ARGV[0] eq "-i" || $ARGV[0] eq "--id") {
       unless ($#ARGV > 0) {
         print STDERR "Missing contest id parameter.\n";
-        exit $exit_codes{"cli"};
+        exit $exit_codes{cli};
       }
       shift @ARGV;
       while ($#ARGV >= 0 && substr($ARGV[0], 0, 1) ne "-") {
@@ -144,27 +158,27 @@ sub handle_cli_args {
   }
 
   if (scalar @contest_ids < 1) {
-    print STDERR "Unspecified contest id.\n";
-    exit $exit_codes{cli};
+    @contest_ids = get_latest_contests();
+    print STDERR "Getting last div. {1,2,3} contests, because id's weren't specified.\n";
   }
 }
 
 sub rating_change_single_contest {
   my $cid = $_[0];
   my %current_contest = get_contest_info $cid;
-  my $phase = $current_contest{"phase"};
-  unless ($phase eq $contest_status{"finished"}) {
-    if ($phase eq $contest_status{"before"}) {
+  my $phase = $current_contest{phase};
+  unless ($phase eq $contest_status{finished}) {
+    if ($phase eq $contest_status{before}) {
       print "Contest hasn't started yet.\n";
-    } elsif ($phase eq $contest_status{"coding"}) {
+    } elsif ($phase eq $contest_status{coding}) {
       print "Contest is ongoing, go get some ACs!\n";
-    } elsif ($phase eq $contest_status{"pending"}) {
+    } elsif ($phase eq $contest_status{pending}) {
       print "System test hasn't started yet.\n";
-    } elsif ($phase eq $contest_status{"testing"}) {
+    } elsif ($phase eq $contest_status{testing}) {
       print "Waiting for system test to finish.\n";
     } else {
       print STDERR "Unknown contest phase.\n";
-      exit $exit_codes{"invalid_contest_phase"};
+      exit $exit_codes{invalid_contest_phase};
     }
     return;
   }
@@ -174,7 +188,7 @@ sub rating_change_single_contest {
   my @relevant_users = grep {exists($users{$_->{handle}})} @rating_changes;
 
   if (scalar @relevant_users < 1) {
-    print "No one competed!\n";
+    print "No one competed or contest was unrated!\n";
     return;
   }
 
@@ -183,15 +197,17 @@ sub rating_change_single_contest {
     my $newRating = $cur{newRating};
     my $oldRating = $cur{oldRating};
     my $diff = $newRating - $oldRating;
+    my $diffString = $diff > 0 ? "+" . $diff : $diff;
     my $smiley = $oldRating > $newRating ? ":-(" : ":-)";
-    print "$cur{handle}", " ", $oldRating, " -> ", $newRating, " (", $diff > 0 ? "+" : "",$newRating - $oldRating, ") $smiley", "\n";
+    print "$cur{handle} $oldRating -> $newRating ($diffString) $smiley\n";
   }
 }
 
 sub rating_changes {
   my %all_contests = codeforces_api_contest_list;
   foreach(@contest_ids) {
-    print $all_contests{$_}->{name}, "\n";
+    next unless defined $all_contests{$_};
+    print "$all_contests{$_}->{name}", "\n";
     print "http://codeforces.com/contest/$_\n";
     rating_change_single_contest($_);
     print "\n";
