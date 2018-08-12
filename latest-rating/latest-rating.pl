@@ -115,11 +115,12 @@ sub get_latest_contests
   my %divs = ();
   my $cur_id = max keys %contests;
   for (my $i = $cur_id; $i >= 0; --$i) {
-    next unless (defined $contests{$i} && $contests{$i}->{phase} eq
-                 $contest_status{finished});
+    next if ((defined $contests{$i} && $contests{$i}->{phase} ne
+              $contest_status{finished}) || !(defined $contests{$i}));
     my $name = $contests{$i}->{name};
     my (@div) = $name =~ /div\. (\d)/gi;
     foreach (@div) {
+      next if defined $divs{$_};
       $divs{$_} = $i;
     }
     last if scalar values %divs > 2;
@@ -216,4 +217,3 @@ sub rating_changes
 
 handle_cli_args();
 rating_changes();
-
