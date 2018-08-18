@@ -26,6 +26,11 @@ my %exit_codes = (
   invalid_contest_phase => 6
 );
 
+sub debug_print
+{
+  print STDERR "$_[0]\n" if $vflag;
+}
+
 sub handle_cli_args
 {
   while ($#ARGV >= 0) {
@@ -44,16 +49,16 @@ sub handle_cli_args
     } elsif ($ARGV[0] eq "-v" || $ARGV[0] eq "--verbose") {
       $vflag = 1;
       $Codeforces::vflag = 1;
-      print STDERR "Verbose mode enabled.\n";
+      debug_print "Verbose mode enabled.";
     } else {
       if ($ARGV[0] =~ /^\d+$/) {
         push @contest_ids, $ARGV[0];
+      } else {
+        debug_print "Unknown command line argument '$ARGV[0]'." if $vflag;
       }
-      print STDERR "Unknown command line argument '$ARGV[0]'.\n" if $vflag;
     }
     shift @ARGV;
   }
-
 }
 
 sub rating_changes
@@ -62,10 +67,14 @@ sub rating_changes
     @contest_ids = Codeforces::get_latest_contests();
     print "Getting latest finished div. {1,2,3} contests, because contest ids weren't specified.\n\n";
   }
+
   foreach (@contest_ids) {
-    my $current_contest = Codeforces::get_contest $_;
+    my $current_contest = Codeforces::get_contest($_);
+    unless ($current_contest) {
+      print "Contest '$_' probably doesn't exist.\n";
+      next;
+    }
     next unless defined $current_contest;
-    print STDERR "Contest $_ exists.\n";
     print "$current_contest->{name}\n";
     print "http://codeforces.com/contest/$_\n";
     my $phase = $current_contest->{phase};
@@ -79,13 +88,24 @@ sub rating_changes
       } elsif ($phase eq $Codeforces::contest_status{testing}) {
         print "Waiting for system test to finish.\n";
       } else {
-        print STDERR "Unknown contest phase.\n";
+        debug_print "Unknown contest phase.";
         exit $exit_codes{invalid_contest_phase};
       }
       next;
     }
 
-    my $changes = Codeforces::rating_changes_single_contest $_;
+    my $changes = Codeforces::rating_changes_single_contest $_, {
+      "vu.tunganh96" => 1,
+      "blazeva1" => 1,
+      "kristja6" => 1,
+      "slonichobot" => 1,
+      "Manro" => 1,
+      "-Morass-" => 1
+    };
+    if (scalar @{$changes} < 1) {
+      print "No one competed or the contest was unrated.\n";
+      next;
+    }
     foreach (@{$changes}) {
       my $new_rating = $_->{newRating};
       my $old_rating = $_->{oldRating};

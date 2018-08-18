@@ -7,10 +7,10 @@ use utf8;
 
 use HTTP::Tiny;
 use JSON;
-use List::Util qw(max);
+use List::Util qw(max uniq);
 
 our $vflag = 0;
-my $contests = undef; # a reference to an array all of contests
+my $contests = undef; # a reference to a hash contest id's to contests
 
 our %contest_status = (
   before => "BEFORE", 
@@ -68,7 +68,7 @@ sub contest_list
   return unless ($tmp);
   my $result = {};
   foreach (@{$tmp}) {
-    $result->{$_->{id}} = $tmp;
+    $result->{$_->{id}} = $_;
   }
   return $result;
 }
@@ -92,8 +92,9 @@ sub rating_changes
   return $result;
 }
 
-# Pass contest id.
-# Retu
+# Arguments:
+#   - contest id.
+# Returns a contest.
 sub get_contest
 {
   my $cid = $_[0];
@@ -109,7 +110,7 @@ sub get_latest_contests
     my $cur = get_contest $i;
     next unless ($cur);
     next if ($cur->{phase} ne $contest_status{finished});
-    my $name = access_contests()->{$i}->{name};
+    my $name = $cur->{name};
     my (@div) = $name =~ /div\. (\d)/gi;
     foreach (@div) {
       next if defined $divs{$_};
@@ -117,7 +118,7 @@ sub get_latest_contests
     }
     last if scalar values %divs > 2;
   }
-  return values %divs;
+  return uniq values %divs;
 }
 
 # Pass a contest id.
