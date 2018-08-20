@@ -11,6 +11,8 @@ use warnings;
 use utf8;
 use Codeforces;
 
+my %cf_users;
+
 # cli args
 my $vflag = 0;
 my @contest_ids = ();
@@ -31,6 +33,19 @@ sub debug_print
   print STDERR "$_[0]\n" if $vflag;
 }
 
+sub get_cf_users
+{
+  my $ans = HTTP::Tiny->new->get(
+    "https://raw.githubusercontent.com/" .
+    "vutunganh/perl-scripts/master/resources/" .
+    "interesting-users.txt");
+  unless ($ans->{success}) {
+    return;
+  }
+  my @arr = split ' ', $ans->{content};
+  %cf_users = map {$_ => 1} @arr;
+}
+
 sub handle_cli_args
 {
   while ($#ARGV >= 0) {
@@ -39,7 +54,7 @@ sub handle_cli_args
       "relevant users.\n", 
       "\n",
       "Usage: latest-rating.pl -h|--help\n",
-      "       latest-rating.pl [-v|--verbose] CONTEST_ID...\n",
+      "       latest-rating.pl [-v|--verbose] [CONTEST_ID...]\n",
       "  -h|--help           prints this help message\n",
       "  -v|--verbose        enables verbose mode\n",
       "\n",
@@ -94,19 +109,21 @@ sub rating_changes
       next;
     }
 
-    my $changes = Codeforces::rating_changes_single_contest $_, {
-      "vu.tunganh96" => 1,
-      "blazeva1" => 1,
-      "kristja6" => 1,
-      "slonichobot" => 1,
-      "Manro" => 1,
-      "-Morass-" => 1
-    };
-    if (scalar @{$changes} < 1) {
-      print "No one competed or the contest was unrated.\n";
+    get_cf_users();
+    my $all_rating_changes = Codeforces::rating_changes $_;
+    unless ($all_rating_changes) {
+      print "Couldn't find any rating changes, possible reasons: contest " .
+            "was unrated or rating recalculation is ongoing.\n";
       next;
     }
-    foreach (@{$changes}) {
+
+    my @guth = grep {exists $cf_users{$_->{handle}}} @{$all_rating_changes};
+    if (scalar @guth < 1) {
+      print "No one competed.\n";
+      next;
+    }
+
+    foreach (@guth) {
       my $new_rating = $_->{newRating};
       my $old_rating = $_->{oldRating};
       my $diff = $new_rating - $old_rating;

@@ -83,7 +83,7 @@ sub access_contests
 
 # Arguments:
 #   - contest id.
-# Returns an array of references to RatingChange objects.
+# Returns a reference to an array of references to RatingChange objects.
 sub rating_changes
 {
   debug_print "Getting all rating changes.";
@@ -101,6 +101,7 @@ sub get_contest
   return access_contests()->{$cid};
 }
 
+# Returns an array of latest div {1,2,3} contests.
 sub get_latest_contests
 {
   my %divs = ();
@@ -111,6 +112,7 @@ sub get_latest_contests
     next unless ($cur);
     next if ($cur->{phase} ne $contest_status{finished});
     my $name = $cur->{name};
+    debug_print $name;
     my (@div) = $name =~ /div\. (\d)/gi;
     foreach (@div) {
       next if defined $divs{$_};
@@ -119,16 +121,4 @@ sub get_latest_contests
     last if scalar values %divs > 2;
   }
   return uniq values %divs;
-}
-
-# Pass a contest id.
-# Returns a reference to an array of RatingChange objects.
-sub rating_changes_single_contest
-{
-  my $cid = $_[0];
-  my $users = $_[1]; # reference to an array of usernames
-
-  my $rating_changes = rating_changes $cid;
-  my @relevant = grep {exists $users->{$_->{handle}}} @{$rating_changes};
-  return \@relevant;
 }
