@@ -7,7 +7,7 @@ use utf8;
 
 use HTTP::Tiny;
 use JSON;
-use List::Util qw(max uniq);
+use List::Util qw(max);
 
 our $vflag = 0;
 my $contests = undef; # a reference to a hash contest id's to contests
@@ -23,6 +23,12 @@ our %contest_status = (
 sub debug_print
 {
   print STDERR "$_[0]\n" if $vflag;
+}
+
+sub uniq
+{
+  my %h = map {$_ => 1} @{$_[0]};
+  return keys %h;
 }
 
 # Parameters:
@@ -120,5 +126,6 @@ sub get_latest_contests
     }
     last if scalar values %divs > 2;
   }
-  return uniq values %divs;
+  my @to_uniq = values %divs;
+  return uniq \@to_uniq;
 }
