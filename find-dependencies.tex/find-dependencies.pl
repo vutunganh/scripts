@@ -1,5 +1,6 @@
 #!/usr/bin/env perl
 # Script similar to gcc -MM, but for .tex files.
+# Only works for plainTeX.
 
 use strict;
 use warnings;
@@ -10,6 +11,8 @@ my %EXTENSION_MAP = (
 
 my @INCLUDE_SYNTAX = (qr/\\input\s+(\S+)/);
 
+# TODO: check if the included file exists, otherwise it's most likely a system
+#   dependency, which doesn't need to be included
 sub find_dependencies {
   my $filename = $_[0];
   my @result = ();
@@ -47,4 +50,5 @@ sub custom_include_syntax {
 foreach (@ARGV) {
   print_dependencies($_);
 }
+print "\n";
 
