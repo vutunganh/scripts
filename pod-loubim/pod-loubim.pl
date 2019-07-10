@@ -3,9 +3,8 @@
 use strict;
 use warnings;
 use utf8;
-use HTTP::Tiny;
+use LWP::UserAgent; # not HTTP::Tiny, because encoding
 binmode(STDOUT, ":utf8");
-binmode(STDERR, ":utf8");
 
 my $vflag = 0; # verbose
 my $lflag = 0; # lowercase menu?
@@ -61,10 +60,10 @@ sub fetch_site {
 
   print STDERR "Fetching '$link'.\n" if $vflag;
 
-  my $response = HTTP::Tiny->new->get($link);
-  $response->{success} or die "Couldn't fetch menu.\n";
+  my $response = LWP::UserAgent->new->get($link);
+  $response->is_success or die "Couldn't fetch menu.\n";
   print STDERR "Successfully fetched menu.\n" if $vflag;
-  return $response->{content};
+  return $response->decoded_content;
 }
 
 sub obtain_menu {
