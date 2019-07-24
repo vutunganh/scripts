@@ -66,6 +66,14 @@ sub codeforces_api_call
   return $deserialized->{result};
 }
 
+sub get_users_latest_rating_change {
+  my ($user) = @_;
+  my $result = codeforces_api_call "user.rating?handle=$user";
+  return $result->[-1];
+}
+
+### THE REST IS NOT USED ###
+
 # Returns a reference to a hash of contest id -> contest.
 sub contest_list
 {
